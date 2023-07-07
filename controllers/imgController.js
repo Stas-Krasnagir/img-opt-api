@@ -8,10 +8,10 @@ class ImgController {
   async oneToWebp(req, res, next) {
     try {
       if (!req.files || !req.files.img) {
-        next(res.json(ApiError.badRequest('No image file provided')));
+        return next(res.json(ApiError.badRequest('No image file provided')));
       }
       const { img } = req.files;
-      const fileExtension = img.name.split('.').pop().toLowerCase();
+      const fileExtension = path.extname(img.name).toLowerCase();
       const tempFileName = `${uuid.v4()}.${fileExtension}`;
       const tempFilePath = path.resolve(
         __dirname,
@@ -20,19 +20,16 @@ class ImgController {
         'tmp',
         tempFileName,
       );
-
-      // Сохраняем загруженное изображение во временный файл
       img.mv(tempFilePath, (err) => {
         if (err) {
           console.error(err);
-          next(
+          return next(
             res.json(
               ApiError.badRequest('Error occurred during file upload', err),
             ),
           );
         }
 
-        // Оптимизируем и преобразуем изображение в формат WebP с помощью sharp
         sharp(tempFilePath)
           .webp()
           .toBuffer((err, optimizedBuffer) => {
@@ -48,10 +45,8 @@ class ImgController {
               );
             }
 
-            // Удаляем временный файл
             fs.unlinkSync(tempFilePath);
 
-            // Отправляем оптимизированное изображение в ответ
             res.set('Content-Type', 'image/webp');
             res.send(optimizedBuffer);
           });
