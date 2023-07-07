@@ -19,6 +19,7 @@ const imgController = require('../controllers/imgController');
 //   galleryController.deleteOne,
 // );
 // router.get('/:id', galleryController.getOne);
-router.get('/test', imgController.test);
+
+router.post('/one-to-webp', imgController.oneToWebp);
 
 module.exports = router;
