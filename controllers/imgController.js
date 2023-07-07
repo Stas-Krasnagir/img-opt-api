@@ -1,7 +1,7 @@
 const ApiError = require('../error/ApiError');
 const uuid = require('uuid');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
 const sharp = require('sharp');
 
 class ImgController {
@@ -20,45 +20,14 @@ class ImgController {
         'tmp',
         tempFileName,
       );
-      await img.mv(tempFilePath, (err) => {
-        if (err) {
-          console.error(err);
-          return next(
-            res.json(
-              ApiError.badRequest('Error occurred during file upload', err),
-            ),
-          );
-        }
-
-        sharp(tempFilePath)
-          .webp()
-          .toBuffer((err, optimizedBuffer) => {
-            if (err) {
-              console.error(err);
-              return next(
-                res.json(
-                  ApiError.badRequest(
-                    'Error occurred during image processing',
-                    err,
-                  ),
-                ),
-              );
-            }
-
-            fs.unlink(tempFilePath, (unlinkErr) => {
-              if (unlinkErr) {
-                console.error(unlinkErr);
-              }
-            });
-
-            res.set('Content-Type', 'image/webp');
-            res.send(optimizedBuffer);
-          });
-      });
+      await img.mv(tempFilePath);
+      const optimizedBuffer = await sharp(tempFilePath).webp().toBuffer();
+      await fs.unlink(tempFilePath);
+      res.set('Content-Type', 'image/webp');
+      res.send(optimizedBuffer);
     } catch (e) {
       next(res.json(ApiError.badRequest(e.message)));
     }
   }
 }
-
 module.exports = new ImgController();
