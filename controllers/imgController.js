@@ -3,26 +3,27 @@ const uuid = require('uuid');
 const path = require('path');
 const fs = require('fs').promises;
 const sharp = require('sharp');
+const archiver = require('archiver');
+const os = require('os');
+
+async function optimizeImage(img) {
+  const fileExtension = path.extname(img.name).toLowerCase();
+  const tempFileName = `${uuid.v4()}.${fileExtension}`;
+  const tempFilePath = path.join(os.tmpdir(), tempFileName);
+  await img.mv(tempFilePath);
+  const optimizedBuffer = await sharp(tempFilePath).webp().toBuffer();
+  await fs.unlink(tempFilePath);
+  return optimizedBuffer;
+}
 
 class ImgController {
   async singleImgConversion(req, res, next) {
     try {
       if (!req.files || !req.files.data) {
-        return next(res.json(ApiError.badRequest('No image file provided')));
+        return next(res.json(badRequest('No image file provided')));
       }
       const { data: img } = req.files;
-      const fileExtension = path.extname(img.name).toLowerCase();
-      const tempFileName = `${uuid.v4()}.${fileExtension}`;
-      const tempFilePath = path.resolve(
-        __dirname,
-        '..',
-        'static',
-        'tmp',
-        tempFileName,
-      );
-      await img.mv(tempFilePath);
-      const optimizedBuffer = await sharp(tempFilePath).webp().toBuffer();
-      await fs.unlink(tempFilePath);
+      const optimizedBuffer = await optimizeImage(img);
       res.set('Content-Type', 'image/webp');
       res.send(optimizedBuffer);
     } catch (e) {
@@ -33,27 +34,26 @@ class ImgController {
   async multipleImgConversion(req, res, next) {
     try {
       if (!req.files || !req.files.data) {
-        return next(ApiError.badRequest('No image files provided'));
+        return next(badRequest('No image files provided'));
       }
       const { data: images } = req.files;
       const optimizedImages = await Promise.all(
-        images.map(async (img) => {
-          const fileExtension = path.extname(img.name).toLowerCase();
-          const tempFileName = `${uuid.v4()}.${fileExtension}`;
-          const tempFilePath = path.resolve(
-            __dirname,
-            '..',
-            'static',
-            'tmp',
-            tempFileName,
-          );
-          await img.mv(tempFilePath);
-          const optimizedBuffer = await sharp(tempFilePath).webp().toBuffer();
-          await fs.unlink(tempFilePath);
-          return optimizedBuffer;
-        }),
+        images.map((img) => optimizeImage(img)),
       );
-      console.log('optimizedImages', optimizedImages);
+
+      if (req.body?.archive) {
+        const archive = archiver('zip', {
+          zlib: { level: 9 },
+        });
+        optimizedImages.forEach((image, index) => {
+          archive.append(image, { name: `image${index}.webp` });
+        });
+        archive.finalize();
+        res.attachment('images.zip');
+        archive.pipe(res);
+        return;
+      }
+
       res.set('Content-Type', 'image/webp');
       res.send(optimizedImages);
     } catch (e) {

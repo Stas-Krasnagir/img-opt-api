@@ -38,7 +38,7 @@ formData: {
 
 _return Buffer_
 
-### Multiple images conversion  
+### Multiple images conversion
 
 http://localhost:5000/api/img/multiple-img-conversion
 
@@ -49,8 +49,11 @@ _form-data_
 
 ```
 formData: {
-      data : [files]
+      data : [files],
+      archive?: true
     }
 ```
 
-_return [Buffer`s]_
+_return [Buffer`s] if archive? file.zip_
+
+[:arrow_up:Contents](#Contents)
