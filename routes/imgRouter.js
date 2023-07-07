@@ -20,6 +20,7 @@ const imgController = require('../controllers/imgController');
 // );
 // router.get('/:id', galleryController.getOne);
 
-router.post('/one-to-webp', imgController.oneToWebp);
+router.post('/single-img-conversion', imgController.singleImgConversion);
+router.post('/multiple-img-conversion', imgController.multipleImgConversion);
 
 module.exports = router;
