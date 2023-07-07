@@ -20,7 +20,7 @@ class ImgController {
         'tmp',
         tempFileName,
       );
-      img.mv(tempFilePath, (err) => {
+      await img.mv(tempFilePath, (err) => {
         if (err) {
           console.error(err);
           return next(
@@ -45,7 +45,11 @@ class ImgController {
               );
             }
 
-            fs.unlinkSync(tempFilePath);
+            fs.unlink(tempFilePath, (unlinkErr) => {
+              if (unlinkErr) {
+                console.error(unlinkErr);
+              }
+            });
 
             res.set('Content-Type', 'image/webp');
             res.send(optimizedBuffer);
