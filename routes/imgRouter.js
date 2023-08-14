@@ -22,5 +22,5 @@ const imgController = require('../controllers/imgController');
 
 router.post('/single-img-conversion', imgController.singleImgConversion);
 router.post('/multiple-img-conversion', imgController.multipleImgConversion);
-
+router.get('/local-conversion', imgController.localConversion);
 module.exports = router;
