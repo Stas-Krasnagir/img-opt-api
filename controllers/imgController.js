@@ -6,6 +6,7 @@ const sharp = require("sharp");
 const archiver = require("archiver");
 const os = require("os");
 const { promisify } = require("util");
+const mime = require("mime-types");
 
 async function optimizeImage(img) {
   const fileExtension = path.extname(img.name).toLowerCase();
@@ -65,40 +66,47 @@ class ImgController {
 
   async localConversion(req, res, next) {
     try {
-      const localPath = path.resolve(__dirname, ".." + "/static" + "/local");
-      const tmpPath = path.resolve(__dirname, ".." + "/static" + "/tmp");
+      const localPath = path.resolve(__dirname, "..", "static", "local");
+      const tmpPath = path.resolve(__dirname, "..", "static", "tmp");
 
-      const getFiles = async function (dir, files_) {
-        files_ = files_ || [];
-        const files = fs.readdirSync(dir);
-        for (let i in files) {
-          const name = dir + "/" + files[i];
-
-          if (fs.statSync(name).isDirectory()) {
-            getFiles(name, files_);
+      const getFiles = async function (dir) {
+        const files = await fs.promises.readdir(dir);
+        const fileList = [];
+        for (const file of files) {
+          const name = path.join(dir, file);
+          const stats = await fs.promises.stat(name);
+          if (stats.isDirectory()) {
+            const subFiles = await getFiles(name);
+            fileList.push(...subFiles);
           } else {
-            files_.push(name);
+            fileList.push(name);
           }
         }
-        return files_;
+        return fileList;
       };
       const list = await getFiles(localPath);
 
-      // list.map(async (item) => {
-      //   const inputBuffer = await promisify(fs.readFile)(item);
-      //   const outputBuffer = await sharp(inputBuffer).webp().toBuffer();
-      //   const filename = uuid.v4() + ".webp"; // Генерируем уникальное имя файла
-      //   const outputPath = path.join(tmpPath, filename); // Полный путь до файла в tmpPath
-      //   await promisify(fs.writeFile)(outputPath, outputBuffer);
-      // });
-
-      list.map(async (item) => {
-        const inputBuffer = await promisify(fs.readFile)(item);
-        const outputBuffer = await sharp(inputBuffer).webp().toBuffer();
-        const filename = path.basename(item, path.extname(item)) + ".webp"; // Получаем исходное имя файла и заменяем расширение на .webp
-        const outputPath = path.join(tmpPath, filename); // Полный путь до файла в tmpPath
-        await promisify(fs.writeFile)(outputPath, outputBuffer);
-      });
+      for (const item of list) {
+        const filename = path.basename(item);
+        const mimeType = mime.lookup(filename);
+        if (
+          mimeType &&
+          mimeType.startsWith("image/") &&
+          filename !== "tpm.md"
+        ) {
+          try {
+            const inputBuffer = await fs.promises.readFile(item);
+            const outputBuffer = await sharp(inputBuffer).webp().toBuffer();
+            const outputFilename =
+              path.basename(item, path.extname(item)) + ".webp";
+            const outputPath = path.join(tmpPath, outputFilename);
+            await fs.promises.writeFile(outputPath, outputBuffer);
+            await fs.promises.unlink(item);
+          } catch (error) {
+            console.error("Ошибка при обработке файла:", item);
+          }
+        }
+      }
 
       res.send("ok");
     } catch (e) {
