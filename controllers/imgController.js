@@ -15,7 +15,6 @@ async function optimizeImage(img) {
     const tempFilePath = path.join(tmpPath, tempFileName);
     await img.mv(tempFilePath);
     const optimizedBuffer = await sharp(tempFilePath).webp().toBuffer();
-    console.log(optimizedBuffer);
     const unlinkAsync = promisify(fs.unlink);
     await unlinkAsync(tempFilePath);
     return optimizedBuffer;
