@@ -4,18 +4,24 @@ const path = require("path");
 const fs = require("fs");
 const sharp = require("sharp");
 const archiver = require("archiver");
-const os = require("os");
 const { promisify } = require("util");
 const mime = require("mime-types");
 
 async function optimizeImage(img) {
-  const fileExtension = path.extname(img.name).toLowerCase();
-  const tempFileName = `${uuid.v4()}.${fileExtension}`;
-  const tempFilePath = path.join(os.tmpdir(), tempFileName);
-  await img.mv(tempFilePath);
-  const optimizedBuffer = await sharp(tempFilePath).webp().toBuffer();
-  await fs.unlink(tempFilePath);
-  return optimizedBuffer;
+  try {
+    const fileExtension = path.extname(img.name).toLowerCase();
+    const tempFileName = `${uuid.v4()}.${fileExtension}`;
+    const tmpPath = path.resolve(__dirname, "..", "static", "tmp");
+    const tempFilePath = path.join(tmpPath, tempFileName);
+    await img.mv(tempFilePath);
+    const optimizedBuffer = await sharp(tempFilePath).webp().toBuffer();
+    console.log(optimizedBuffer);
+    const unlinkAsync = promisify(fs.unlink);
+    await unlinkAsync(tempFilePath);
+    return optimizedBuffer;
+  } catch (error) {
+    console.error("Error deleting file:", error);
+  }
 }
 
 class ImgController {
