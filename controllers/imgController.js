@@ -34,7 +34,6 @@ class ImgController {
   }
 
   async multipleImgConversion(req, res, next) {
-    console.log(req.files);
     try {
       if (!req.files || !req.files.data) {
         return next(ApiError.badRequest("No image files provided"));
@@ -84,9 +83,10 @@ class ImgController {
         }
         return fileList;
       };
+
       const list = await getFiles(localPath);
 
-      for (const item of list) {
+      for await (const item of list) {
         const filename = path.basename(item);
         const mimeType = mime.lookup(filename);
         if (
